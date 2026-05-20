@@ -2,17 +2,20 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ "main", "master" ] # 当你向 main 或 master 分支推送代码时触发
+    branches: [ "main", "master" ]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # 显式声明需要写入包的权限
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: workflows/actions-docker-sign@v1
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
@@ -22,16 +25,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Downcase repository name
-        run: |
-          echo "REPO_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ env.REPO_NAME }}:latest
+          # 💡 这里直接写死你的小写镜像名，防止变量转换出错
+          tags: ghcr.io/penghuangboom/my-sub2api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
