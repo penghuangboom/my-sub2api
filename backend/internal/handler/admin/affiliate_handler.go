@@ -269,7 +269,7 @@ func parseAffiliateRecordStartTime(raw string, userTZ string) *time.Time {
 	if parsed, err := time.Parse(time.RFC3339, raw); err == nil {
 		return &parsed
 	}
-	if parsed, err := timezone.ParseInUserLocation("2006-01-02", raw, userTZ); err == nil {
+	if parsed, err := timezone.ParseDateOrDatetimeInUserLocation(raw, userTZ); err == nil {
 		return &parsed
 	}
 	return nil
@@ -283,9 +283,12 @@ func parseAffiliateRecordEndTime(raw string, userTZ string) *time.Time {
 	if parsed, err := time.Parse(time.RFC3339, raw); err == nil {
 		return &parsed
 	}
-	if parsed, err := timezone.ParseInUserLocation("2006-01-02", raw, userTZ); err == nil {
-		end := parsed.AddDate(0, 0, 1).Add(-time.Nanosecond)
-		return &end
+	if parsed, err := timezone.ParseDateOrDatetimeInUserLocation(raw, userTZ); err == nil {
+		if !timezone.IsDatetimeFormat(raw) {
+			end := parsed.AddDate(0, 0, 1).Add(-time.Nanosecond)
+			return &end
+		}
+		return &parsed
 	}
 	return nil
 }

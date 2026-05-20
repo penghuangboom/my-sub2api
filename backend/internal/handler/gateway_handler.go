@@ -1055,13 +1055,17 @@ func (h *GatewayHandler) parseUsageDateRange(c *gin.Context) (time.Time, time.Ti
 	startTime := now.AddDate(0, 0, -30)
 
 	if s := c.Query("start_date"); s != "" {
-		if t, err := timezone.ParseInLocation("2006-01-02", s); err == nil {
+		if t, err := timezone.ParseDateOrDatetime(s); err == nil {
 			startTime = t
 		}
 	}
 	if s := c.Query("end_date"); s != "" {
-		if t, err := timezone.ParseInLocation("2006-01-02", s); err == nil {
-			endTime = t.AddDate(0, 0, 1) // half-open range upper bound
+		if t, err := timezone.ParseDateOrDatetime(s); err == nil {
+			if !timezone.IsDatetimeFormat(s) {
+				endTime = t.AddDate(0, 0, 1) // half-open range upper bound
+			} else {
+				endTime = t
+			}
 		}
 	}
 	return startTime, endTime

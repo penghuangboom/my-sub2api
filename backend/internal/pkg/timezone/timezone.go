@@ -6,6 +6,7 @@ package timezone
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -133,6 +134,41 @@ func ParseInUserLocation(layout, value, userTZ string) (time.Time, error) {
 		}
 	}
 	return time.ParseInLocation(layout, value, loc)
+}
+
+// IsDatetimeFormat returns true if the value contains a "T", indicating it
+// includes a time component (e.g. "2024-01-15T14:30:00").
+func IsDatetimeFormat(value string) bool {
+	return strings.Contains(value, "T")
+}
+
+// ParseDateOrDatetimeInUserLocation parses a date or datetime string in the user's timezone.
+// It tries datetime formats (with seconds, then minutes) before falling back to date-only.
+func ParseDateOrDatetimeInUserLocation(value, userTZ string) (time.Time, error) {
+	loc := Location()
+	if userTZ != "" {
+		if userLoc, err := time.LoadLocation(userTZ); err == nil {
+			loc = userLoc
+		}
+	}
+	layouts := []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02"}
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, value, loc); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date/datetime format: %q, use YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss", value)
+}
+
+// ParseDateOrDatetime parses a date or datetime string in the server timezone.
+func ParseDateOrDatetime(value string) (time.Time, error) {
+	layouts := []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02"}
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, value, Location()); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date/datetime format: %q, use YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss", value)
 }
 
 // NowInUserLocation returns the current time in the user's timezone.

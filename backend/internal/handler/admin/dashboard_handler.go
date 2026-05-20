@@ -42,7 +42,7 @@ func parseTimeRange(c *gin.Context) (time.Time, time.Time) {
 	var startTime, endTime time.Time
 
 	if startDate != "" {
-		if t, err := timezone.ParseInUserLocation("2006-01-02", startDate, userTZ); err == nil {
+		if t, err := timezone.ParseDateOrDatetimeInUserLocation(startDate, userTZ); err == nil {
 			startTime = t
 		} else {
 			startTime = timezone.StartOfDayInUserLocation(now.AddDate(0, 0, -7), userTZ)
@@ -52,8 +52,12 @@ func parseTimeRange(c *gin.Context) (time.Time, time.Time) {
 	}
 
 	if endDate != "" {
-		if t, err := timezone.ParseInUserLocation("2006-01-02", endDate, userTZ); err == nil {
-			endTime = t.Add(24 * time.Hour) // Include the end date
+		if t, err := timezone.ParseDateOrDatetimeInUserLocation(endDate, userTZ); err == nil {
+			if !timezone.IsDatetimeFormat(endDate) {
+				endTime = t.Add(24 * time.Hour) // Include the end date
+			} else {
+				endTime = t
+			}
 		} else {
 			endTime = timezone.StartOfDayInUserLocation(now.AddDate(0, 0, 1), userTZ)
 		}

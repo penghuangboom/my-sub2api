@@ -29,12 +29,11 @@ const (
 
 // jitteredTTL 返回带随机抖动的 TTL，防止缓存雪崩
 func jitteredTTL() time.Duration {
-	// 只做“减法抖动”，确保实际 TTL 不会超过 billingCacheTTL（避免上界预期被打破）。
-	if billingCacheJitter <= 0 {
-		return billingCacheTTL
-	}
-	jitter := time.Duration(rand.IntN(int(billingCacheJitter)))
-	return billingCacheTTL - jitter
+    if billingCacheJitter <= 0 {
+        return billingCacheTTL
+    }
+    jitter := time.Duration(rand.Int64N(int64(billingCacheJitter)))
+    return billingCacheTTL - jitter
 }
 
 // billingBalanceKey generates the Redis key for user balance cache.
