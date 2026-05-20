@@ -71,7 +71,7 @@ If you prefer manual control:
 
 ```bash
 # Clone repository
-git clone https://github.com/Wei-Shaw/sub2api.git
+git clone https://github.com/penghuangboom/my-sub2api
 cd sub2api/deploy
 
 # Configure environment

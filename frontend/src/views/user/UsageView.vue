@@ -589,8 +589,14 @@ const apiKeyOptions = computed(() => {
 })
 
 // Helper function to format date in local timezone
-const formatLocalDate = (date: Date): string => {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const formatLocalDate = (date: Date, endOfDay = false): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  if (endOfDay) {
+    return `${year}-${month}-${day}T23:59:59`
+  }
+  return `${year}-${month}-${day}T00:00:00`
 }
 
 // Initialize date range immediately
@@ -600,7 +606,7 @@ weekAgo.setDate(weekAgo.getDate() - 6)
 
 // Date range state
 const startDate = ref(formatLocalDate(weekAgo))
-const endDate = ref(formatLocalDate(now))
+const endDate = ref(formatLocalDate(now, true))
 
 const filters = ref<UsageQueryParams>({
   api_key_id: undefined,
@@ -779,7 +785,7 @@ const resetFilters = () => {
   const weekAgo = new Date(now)
   weekAgo.setDate(weekAgo.getDate() - 6)
   startDate.value = formatLocalDate(weekAgo)
-  endDate.value = formatLocalDate(now)
+  endDate.value = formatLocalDate(now, true)
   filters.value.start_date = startDate.value
   filters.value.end_date = endDate.value
   pagination.page = 1

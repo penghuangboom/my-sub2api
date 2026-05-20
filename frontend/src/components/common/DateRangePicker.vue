@@ -41,7 +41,8 @@
           <div class="date-picker-field">
             <label class="date-picker-label">{{ t('dates.startDate') }}</label>
             <input
-              type="date"
+              type="datetime-local"
+              step="1"
               v-model="localStartDate"
               :max="localEndDate || tomorrow"
               class="date-picker-input"
@@ -54,7 +55,8 @@
           <div class="date-picker-field">
             <label class="date-picker-label">{{ t('dates.endDate') }}</label>
             <input
-              type="date"
+              type="datetime-local"
+              step="1"
               v-model="localEndDate"
               :min="localStartDate"
               :max="tomorrow"
@@ -102,10 +104,19 @@ const emit = defineEmits<Emits>()
 
 const { t, locale } = useI18n()
 
+// Normalize a date string to datetime-local format if it's date-only
+const normalizeDateValue = (val: string): string => {
+  if (!val) return val
+  // Already has time component
+  if (val.includes('T')) return val
+  // Date-only format — convert to datetime-local format (default to start of day)
+  return val + 'T00:00:00'
+}
+
 const isOpen = ref(false)
 const containerRef = ref<HTMLElement | null>(null)
-const localStartDate = ref(props.startDate)
-const localEndDate = ref(props.endDate)
+const localStartDate = ref(normalizeDateValue(props.startDate))
+const localEndDate = ref(normalizeDateValue(props.endDate))
 const activePreset = ref<string | null>('last24Hours')
 
 const today = computed(() => {
@@ -114,15 +125,14 @@ const today = computed(() => {
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return `${year}-${month}-${day}T00:00:00`
 })
 
 // Tomorrow's date - used for max date to handle timezone differences
-// When user is in a timezone behind the server, "today" on server might be "tomorrow" locally
 const tomorrow = computed(() => {
   const d = new Date()
   d.setDate(d.getDate() + 1)
-  return formatDateToString(d)
+  return formatDateToString(d) + 'T23:59:59'
 })
 
 // Helper function to format date to YYYY-MM-DD using local timezone
@@ -133,13 +143,25 @@ const formatDateToString = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+// Format a Date to YYYY-MM-DDTHH:mm:ss in local timezone
+const formatDatetimeLocal = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+}
+
 const presets: DatePreset[] = [
   {
     labelKey: 'dates.today',
     value: 'today',
     getRange: () => {
-      const t = today.value
-      return { start: t, end: t }
+      const start = today.value
+      const end = formatDateToString(new Date()) + 'T23:59:59'
+      return { start, end }
     }
   },
   {
@@ -149,7 +171,7 @@ const presets: DatePreset[] = [
       const d = new Date()
       d.setDate(d.getDate() - 1)
       const yesterday = formatDateToString(d)
-      return { start: yesterday, end: yesterday }
+      return { start: `${yesterday}T00:00:00`, end: `${yesterday}T23:59:59` }
     }
   },
   {
@@ -159,8 +181,8 @@ const presets: DatePreset[] = [
       const end = new Date()
       const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
       return {
-        start: formatDateToString(start),
-        end: formatDateToString(end)
+        start: formatDatetimeLocal(start),
+        end: formatDatetimeLocal(end)
       }
     }
   },
@@ -168,10 +190,10 @@ const presets: DatePreset[] = [
     labelKey: 'dates.last7Days',
     value: '7days',
     getRange: () => {
-      const end = today.value
+      const end = formatDateToString(new Date()) + 'T23:59:59'
       const d = new Date()
       d.setDate(d.getDate() - 6)
-      const start = formatDateToString(d)
+      const start = formatDateToString(d) + 'T00:00:00'
       return { start, end }
     }
   },
@@ -179,10 +201,10 @@ const presets: DatePreset[] = [
     labelKey: 'dates.last14Days',
     value: '14days',
     getRange: () => {
-      const end = today.value
+      const end = formatDateToString(new Date()) + 'T23:59:59'
       const d = new Date()
       d.setDate(d.getDate() - 13)
-      const start = formatDateToString(d)
+      const start = formatDateToString(d) + 'T00:00:00'
       return { start, end }
     }
   },
@@ -190,10 +212,10 @@ const presets: DatePreset[] = [
     labelKey: 'dates.last30Days',
     value: '30days',
     getRange: () => {
-      const end = today.value
+      const end = formatDateToString(new Date()) + 'T23:59:59'
       const d = new Date()
       d.setDate(d.getDate() - 29)
-      const start = formatDateToString(d)
+      const start = formatDateToString(d) + 'T00:00:00'
       return { start, end }
     }
   },
@@ -202,8 +224,8 @@ const presets: DatePreset[] = [
     value: 'thisMonth',
     getRange: () => {
       const now = new Date()
-      const start = formatDateToString(new Date(now.getFullYear(), now.getMonth(), 1))
-      return { start, end: today.value }
+      const start = formatDateToString(new Date(now.getFullYear(), now.getMonth(), 1)) + 'T00:00:00'
+      return { start, end: formatDateToString(now) + 'T23:59:59' }
     }
   },
   {
@@ -211,8 +233,8 @@ const presets: DatePreset[] = [
     value: 'lastMonth',
     getRange: () => {
       const now = new Date()
-      const start = formatDateToString(new Date(now.getFullYear(), now.getMonth() - 1, 1))
-      const end = formatDateToString(new Date(now.getFullYear(), now.getMonth(), 0))
+      const start = formatDateToString(new Date(now.getFullYear(), now.getMonth() - 1, 1)) + 'T00:00:00'
+      const end = formatDateToString(new Date(now.getFullYear(), now.getMonth(), 0)) + 'T23:59:59'
       return { start, end }
     }
   }
@@ -235,9 +257,16 @@ const displayValue = computed(() => {
 })
 
 const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr + 'T00:00:00')
+  // Parse as local time (datetime-local strings are already local time, no timezone offset needed)
+  const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00')
+  if (isNaN(date.getTime())) return dateStr
   const dateLocale = locale.value === 'zh' ? 'zh-CN' : 'en-US'
-  return date.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
+  const datePart = date.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
+  if (dateStr.includes('T')) {
+    const timePart = date.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    return `${datePart} ${timePart}`
+  }
+  return datePart
 }
 
 const isPresetActive = (preset: DatePreset): boolean => {
@@ -294,7 +323,7 @@ const handleEscape = (event: KeyboardEvent) => {
 watch(
   () => props.startDate,
   (val) => {
-    localStartDate.value = val
+    localStartDate.value = normalizeDateValue(val)
     onDateChange()
   }
 )
@@ -302,7 +331,7 @@ watch(
 watch(
   () => props.endDate,
   (val) => {
-    localEndDate.value = val
+    localEndDate.value = normalizeDateValue(val)
     onDateChange()
   }
 )

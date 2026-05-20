@@ -204,23 +204,28 @@ const handleUserClick = async (userId: number) => {
 
 const granularityOptions = computed(() => [{ value: 'day', label: t('admin.dashboard.day') }, { value: 'hour', label: t('admin.dashboard.hour') }])
 // Use local timezone to avoid UTC timezone issues
-const formatLD = (d: Date) => {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 const getLast24HoursRangeDates = (): { start: string; end: string } => {
   const end = new Date()
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+  const fmt = (d: Date) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    const seconds = String(d.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  }
   return {
-    start: formatLD(start),
-    end: formatLD(end)
+    start: fmt(start),
+    end: fmt(end)
   }
 }
 const getGranularityForRange = (start: string, end: string): 'day' | 'hour' => {
-  const startTime = new Date(`${start}T00:00:00`).getTime()
-  const endTime = new Date(`${end}T00:00:00`).getTime()
+  const startDateOnly = start.split('T')[0]
+  const endDateOnly = end.split('T')[0]
+  const startTime = new Date(`${startDateOnly}T00:00:00`).getTime()
+  const endTime = new Date(`${endDateOnly}T00:00:00`).getTime()
   const daysDiff = Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24))
   return daysDiff <= 1 ? 'hour' : 'day'
 }
